@@ -183,7 +183,7 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 LOGIN_URL = 'http://127.0.0.1:8080/accounts/login/'
-LOGIN_REDIRECT_URL = '/admin/'
+LOGIN_REDIRECT_URL = '/'
 
 # -------------------------------------------------
 # DRF / JWT
