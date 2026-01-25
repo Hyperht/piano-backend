@@ -13,8 +13,8 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://next-egypt.com',
-    'https://www.next-egypt.com',
+    'https://beanomart.com',
+    'https://www.beanomart.com',
 ]
 
 # -------------------------------------------------
@@ -126,8 +126,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://next-egypt.com",
-    "https://www.next-egypt.com",
+    "https://beanomart.com",
+    "https://www.beanomart.com",
 ]
 
 # -------------------------------------------------
