@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {# 'body' block is used by some allauth templates, 'content' by others (via entrance.html) #}
+    {% block body %}
+        
+        {# Display messages if allauth templates require them inside the body, though base.html has them too #}
+        {# Ideally we rely on base.html messages, but let's keep allauth structure intace #}
+        
+        <div class="allauth-wrapper">
+             {% block content %}
+             {% endblock %}
+        </div>
+    {% endblock %}
+{% endblock %}
+
+{% block extra_head %}
+    {{ block.super }}
+    {# Ensure head_title block from allauth is used if defined #}
+    {% block head_title %}{% endblock %}
+{% endblock %}
