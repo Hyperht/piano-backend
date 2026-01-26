@@ -94,7 +94,7 @@ class SessionTokenView(APIView):
     Exchanges a Django session (from allauth login) for a JWT access/refresh token pair.
     """
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         print("DEBUG: SessionTokenView called")
