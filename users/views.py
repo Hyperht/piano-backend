@@ -102,6 +102,7 @@ class SessionTokenView(APIView):
         print(f"DEBUG: User: {request.user}")
         print(f"DEBUG: Cookies: {request.COOKIES}")
         print(f"DEBUG: Session ID: {request.session.session_key}")
+        print(f"DEBUG: Session Items: {list(request.session.items())}")
 
         # CRITICAL: Do NOT generate a token if the user is not authenticated.
         if not request.user.is_authenticated:
