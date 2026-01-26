@@ -97,6 +97,12 @@ class SessionTokenView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        print("DEBUG: SessionTokenView called")
+        print(f"DEBUG: User authenticated? {request.user.is_authenticated}")
+        print(f"DEBUG: User: {request.user}")
+        print(f"DEBUG: Cookies: {request.COOKIES}")
+        print(f"DEBUG: Session ID: {request.session.session_key}")
+
         # Generate the JWT tokens for the authenticated user
         refresh = RefreshToken.for_user(request.user)
         
