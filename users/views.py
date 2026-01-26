@@ -103,6 +103,11 @@ class SessionTokenView(APIView):
         print(f"DEBUG: Cookies: {request.COOKIES}")
         print(f"DEBUG: Session ID: {request.session.session_key}")
 
+        # CRITICAL: Do NOT generate a token if the user is not authenticated.
+        if not request.user.is_authenticated:
+            print("DEBUG: User is NOT authenticated. Returning 401.")
+            return Response({'detail': 'User not authenticated via session. Cookie might be missing.'}, status=401)
+
         # Generate the JWT tokens for the authenticated user
         refresh = RefreshToken.for_user(request.user)
         
