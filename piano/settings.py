@@ -130,6 +130,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.beanomart.com",
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
 # -------------------------------------------------
 # AUTH
 # -------------------------------------------------

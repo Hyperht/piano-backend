@@ -9,6 +9,9 @@ from rest_framework.exceptions import NotFound, ValidationError, APIException
 from django.db.models import Prefetch
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -84,6 +87,29 @@ class RegisterView(generics.CreateAPIView):
 class MyTokenObtainPairView(TokenObtainPairView):
     """Custom token view for JWTs."""
     serializer_class = MyTokenObtainPairSerializer
+
+
+class SessionTokenView(APIView):
+    """
+    Exchanges a Django session (from allauth login) for a JWT access/refresh token pair.
+    """
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # Generate the JWT tokens for the authenticated user
+        refresh = RefreshToken.for_user(request.user)
+        
+        # You can customize the user response as needed
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'id': request.user.id,
+                'email': getattr(request.user, 'email', ''),
+                'name': getattr(request.user, 'name', ''),
+            }
+        })
 
 
 # --- User Profile View ---

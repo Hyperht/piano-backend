@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers 
 from .views import (
     MyTokenObtainPairView,
+    SessionTokenView,
     RegisterView,
     CategoryViewSet,
     HeroSlideViewSet,
@@ -78,6 +79,7 @@ urlpatterns = [
 
     # --- Authentication endpoints ---
     path('login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/session-token/', SessionTokenView.as_view(), name='session_token_exchange'),
     path('register/', RegisterView.as_view(), name='auth_register'),
 
     # --- User Profile & Suggestions ---
