@@ -233,4 +233,25 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+    # In production with HTTPS, we can use same-site strict or lax depending on needs
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
+else:
+    # Development settings for cross-origin (localhost:5173 -> localhost:8080)
+    # We NEED SameSite='None' to allow the cookie to be sent in cross-site requests
+    # BUT SameSite='None' requires Secure=True in modern browsers.
+    # If you are running passing http, you might need to rely on Lax and same domain (localhost to localhost).
+    # Since we are using 127.0.0.1 and localhost, they are different domains.
+    
+    # TRICK: Most modern browsers REJECT SameSite=None without Secure.
+    # So if you are on HTTP, you MUST run both on "localhost" (not mixed 127.0.0.1) 
+    # OR you accept that it might fail on Chrome.
+    
+    # Let's try to be permissive:
+    SESSION_COOKIE_SAMESITE = 'Lax' 
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
