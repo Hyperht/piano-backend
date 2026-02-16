@@ -11,6 +11,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+OAUTH_CALLBACK_BASE_URL = os.getenv('OAUTH_CALLBACK_BASE_URL')
 
 CSRF_TRUSTED_ORIGINS = [
     'https://beanomart.com',
@@ -122,10 +123,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # CORS
 # -------------------------------------------------
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
     "https://beanomart.com",
     "https://www.beanomart.com",
 ]
@@ -172,28 +169,15 @@ LOCALE_PATHS = [
 ]
 
 # -------------------------------------------------
-# DJANGO SITES / ALLAUTH
-# -------------------------------------------------
-SITE_ID = 1
-
-ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'none'
-ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_LOGOUT_ON_GET = False
-SOCIALACCOUNT_LOGIN_ON_GET = True
-SOCIALACCOUNT_AUTO_SIGNUP = True
-
-LOGIN_URL = 'http://127.0.0.1:8080/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
-
-# -------------------------------------------------
 # DRF / JWT
 # -------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
     ],
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.AllowAny",
+    ),
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
@@ -208,9 +192,86 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "SIGNING_KEY": os.environ.get('JWT_SIGNING_KEY', SECRET_KEY),
+    "SIGNING_KEY": SECRET_KEY,
 
 }
+
+
+# -------------------------------------------------
+# DJANGO SITES / ALLAUTH
+# -------------------------------------------------
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+         "APPS": [
+            {
+                "client_id": os.getenv('GOOGLE_CLIENT_ID'),
+                "secret": os.getenv('GOOGLE_CLIENT_SECRET'),
+                "key": "",
+                "settings": {
+                    # You can fine tune these settings per app:
+                    "scope": [
+                        "profile",
+                        "email",
+                    ],
+                    "auth_params": {
+                        "access_type": "online",
+                    },
+                },
+            },
+        ],
+    },
+    'facebook': {
+        'METHOD': 'oauth2',
+        'SDK_URL': '//connect.facebook.net/{locale}/sdk.js',
+        'SCOPE': ['email', 'public_profile'],
+        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
+        'INIT_PARAMS': {'cookie': True},
+        'FIELDS': [
+            'id',
+            'first_name',
+            'last_name',
+            'middle_name',
+            'name',
+            'name_format',
+            'picture',
+            'short_name',
+            'email',
+        ],
+        'EXCHANGE_TOKEN': True,
+        'APP': {
+            'client_id': os.getenv('FACEBOOK_CLIENT_ID'),
+            'secret': os.getenv('FACEBOOK_CLIENT_SECRET'),
+            'key': ''
+        }
+    }
+}
+SITE_ID = 1
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_LOGOUT_ON_GET = False
+ACCOUNT_LOGOUT_ON_GET = False
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = 'user-profile'
+# Redirect social logins to our custom callback view
+LOGIN_REDIRECT_URL = '/api/auth/social/callback'
+SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/api/auth/social/callback'
+
+# Use HTTP instead of HTTPS for OAuth callbacks in development
+ACCOUNT_DEFAULT_HTTP_PROTOCOL ='https'
+
+# Custom social account adapter to handle MultipleObjectsReturned exceptions
+SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
 
 # -------------------------------------------------
 # PROXY / SSL

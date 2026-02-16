@@ -1255,6 +1255,81 @@ class CheckoutView(generics.CreateAPIView):
         # This calls the complex, atomic logic defined in CheckoutSerializer's create()
         return serializer.save(user=self.request.user)
 
+#Social Media Callback View
+class SocialLoginCallbackView(APIView):
+    """
+    Custom callback view for social logins (Google, Facebook).
+    This view is called after successful OAuth authentication.
+    It generates JWT tokens and redirects to the frontend with the tokens.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        """Handle the OAuth callback and redirect to frontend with tokens."""
+        import os
+        from django.shortcuts import redirect
+        from urllib.parse import urlencode
+        
+        print("DEBUG: SocialLoginCallbackView called")
+        print(f"DEBUG: User authenticated? {request.user.is_authenticated}")
+        print(f"DEBUG: User: {request.user}")
+        
+        # Check if user is authenticated after OAuth
+        if not request.user.is_authenticated:
+            # Redirect to frontend login page with error
+            frontend_url = os.getenv('FRONTEND_URL')
+            error_params = urlencode({'error': 'authentication_failed'})
+            return redirect(f"{frontend_url}/login?{error_params}")
+        
+        # Get user data
+        user = request.user
+        
+        # Update user profile with social account data if available
+        try:
+            from allauth.socialaccount.models import SocialAccount
+            social_account = SocialAccount.objects.filter(user=user).first()
+            
+            if social_account:
+                extra_data = social_account.extra_data
+                
+                # Update user name if not set
+                if not user.name and extra_data.get('name'):
+                    user.name = extra_data.get('name')
+                    user.save(update_fields=['name'])
+
+                print(f"DEBUG: Updated user profile from social account: {extra_data}")
+        except Exception as e:
+            print(f"DEBUG: Error updating user profile from social account: {e}")
+        
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+        
+        # Prepare user data
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'name': getattr(user, 'name', ''),
+            'phone_number': getattr(user, 'phone_number', ''),
+        }
+        
+        # Redirect to frontend with tokens in URL parameters
+        # The frontend will extract these and save to localStorage
+        frontend_url = os.getenv('FRONTEND_URL')
+        params = {
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user_id': user.id,
+            'user_email': user.email,
+            'user_name': user_data['name'],
+        }
+        
+        redirect_url = f"{frontend_url}/auth/callback?{urlencode(params)}"
+        print(f"DEBUG: Redirecting to: {redirect_url}")
+        
+        return redirect(redirect_url)
+
 
 # -----------------------
 # Contact Message ViewSet

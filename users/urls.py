@@ -4,6 +4,7 @@ from rest_framework_nested import routers
 from .views import (
     MyTokenObtainPairView,
     SessionTokenView,
+    SocialLoginCallbackView, 
     RegisterView,
     CategoryViewSet,
     HeroSlideViewSet,
@@ -85,6 +86,9 @@ urlpatterns = [
     # --- User Profile & Suggestions ---
     path('product-suggestions/', product_suggestions, name='product-suggestions'),
     path('user/profile/', UserProfileView.as_view(), name='user-profile'),
+    
+    # --- Social Login Callback ---
+    path('auth/social/callback/', SocialLoginCallbackView.as_view(), name='social_login_callback'),
 
     # --- Cart & Checkout Endpoints ---
     path('cart/apply-coupon/', ApplyCouponView.as_view(), name='apply-coupon'),
