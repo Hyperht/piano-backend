@@ -8,8 +8,12 @@ class EmailBackend(ModelBackend):
         UserModel = get_user_model()
         try:
             # Look up the user by their email instead of username
-            user = UserModel.objects.get(email=username)
-        except UserModel.DoesNotExist:
+            # FIX: Handle MultipleObjectsReturned by selecting the most recently active user
+            users = UserModel.objects.filter(email=username).order_by('-last_login')
+            if not users.exists():
+                return None
+            user = users.first()
+        except Exception:
             return None
         
         # Check if the password is correct for the found user

@@ -10,9 +10,11 @@ from django.views.static import serve as static_serve
 
 # 1. المسارات الأساسية للـ API ولوحة التحكم
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # Renamed to avoid partial collection by catch-all
+    path('django-admin/', admin.site.urls),
     # Friendly index for the auth root (shows links to login/registration)
     path('auth/', TemplateView.as_view(template_name='auth_index.html'), name='auth-home'),
+    path('api/dashboard/', include('dashboard.urls')),
     path('api/', include('users.urls')),
     path('auth/', include('dj_rest_auth.urls')),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
@@ -30,6 +32,8 @@ if settings.DEBUG:
 
 # 3. مسار اصطياد الكل لخدمة الواجهة الأمامية يأتي في النهاية
 urlpatterns += [
-    re_path(r'^(?!admin|api|auth|accounts|media).*$', TemplateView.as_view(template_name='index.html'), name='home'),
+    # Updated regex to allow 'admin' to pass through to frontend
+    # Only 'django-admin' is now reserved for backend admin
+    re_path(r'^(?!django-admin|api|auth|accounts|media).*$', TemplateView.as_view(template_name='index.html'), name='home'),
 ]
 # ملاحظة: أضفت 'media' إلى القائمة المستبعدة كإجراء احترازي إضافي.

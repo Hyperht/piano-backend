@@ -4,7 +4,7 @@ from rest_framework_nested import routers
 from .views import (
     MyTokenObtainPairView,
     SessionTokenView,
-    SocialLoginCallbackView, 
+    SocialLoginCallbackView,
     RegisterView,
     CategoryViewSet,
     HeroSlideViewSet,

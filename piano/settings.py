@@ -8,7 +8,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') or 'False'
+
+# Force secure cookies in production logic if needed, but respect DEBUG for local dev.
+# However, if we are on a "Live production environment" as stated, DEBUG should be False.
+# If DEBUG is True in production, it's a security risk.
+
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 OAUTH_CALLBACK_BASE_URL = os.getenv('OAUTH_CALLBACK_BASE_URL')
@@ -49,6 +54,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.facebook',
 
     'users',
+    'dashboard',
 ]
 
 # -------------------------------------------------
@@ -115,6 +121,8 @@ DATABASES = {
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_MANIFEST_STRICT = False
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -173,11 +181,9 @@ LOCALE_PATHS = [
 # -------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.AllowAny",
-    ),
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
@@ -187,6 +193,10 @@ REST_FRAMEWORK = {
         'user': '1000/hour',
     },
 }
+REST_USE_JWT = True
+
+JWT_AUTH_COOKIE = 'access'
+JWT_AUTH_REFRESH_COOKIE = 'refresh'
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
@@ -195,8 +205,6 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
 
 }
-
-
 # -------------------------------------------------
 # DJANGO SITES / ALLAUTH
 # -------------------------------------------------
@@ -258,19 +266,15 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 ACCOUNT_LOGOUT_ON_GET = False
-ACCOUNT_LOGOUT_ON_GET = False
+# -------------------------------------------------
+# AUTHENTICATION ARCHITECTURE
+# -------------------------------------------------
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
-LOGOUT_REDIRECT_URL = '/'
-LOGIN_REDIRECT_URL = 'user-profile'
-# Redirect social logins to our custom callback view
-LOGIN_REDIRECT_URL = '/api/auth/social/callback'
-SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/api/auth/social/callback'
 
-# Use HTTP instead of HTTPS for OAuth callbacks in development
-ACCOUNT_DEFAULT_HTTP_PROTOCOL ='https'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL =  '/'
 
-# Custom social account adapter to handle MultipleObjectsReturned exceptions
 SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
 
 # -------------------------------------------------
@@ -298,6 +302,9 @@ if not DEBUG:
     # In production with HTTPS, we can use same-site strict or lax depending on needs
     SESSION_COOKIE_SAMESITE = 'Lax'
     CSRF_COOKIE_SAMESITE = 'Lax'
+    # Ensure domain is handled correctly (None means use the domain of the request)
+    SESSION_COOKIE_DOMAIN = None 
+
 
 else:
     # Development settings for cross-origin (localhost:5173 -> localhost:8080)
@@ -316,3 +323,25 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
+# -------------------------------------------------
+# LOGGING CONFIGURATION
+# -------------------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'allauth': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}

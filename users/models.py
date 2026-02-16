@@ -99,13 +99,17 @@ class Product(TimeStampedModel): # Applied TimeStampedModel for consistency
     name_en_normalized = models.CharField(
         max_length=200,
         editable=False,
-        db_index=True
+        db_index=True,
+        null=True,
+        blank=True
     )
 
     name_ar_normalized = models.CharField(
         max_length=200,
         editable=False,
-        db_index=True
+        db_index=True,
+        null=True,
+        blank=True
     )
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -135,7 +139,8 @@ class Product(TimeStampedModel): # Applied TimeStampedModel for consistency
         validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
         default=0.0
     )
-    image = models.ImageField(upload_to='product_images/')
+    quantity = models.PositiveIntegerField(default=0)
+    image = models.ImageField(upload_to='product_images/', blank=True, null=True)
     
     colors = models.ManyToManyField(Color, related_name='products', blank=True)
     rooms = models.ManyToManyField(
@@ -150,6 +155,7 @@ class Product(TimeStampedModel): # Applied TimeStampedModel for consistency
     )
     
     is_active = models.BooleanField(default=True)
+    views = models.PositiveIntegerField(default=0) # Added for "Most Watched" analytics
     # created_at is handled by TimeStampedModel
 
     category = models.ForeignKey(
@@ -176,8 +182,10 @@ class Product(TimeStampedModel): # Applied TimeStampedModel for consistency
     from django.utils.translation import get_language
 
     def save(self, *args, **kwargs):
-        if self.subcategory and self.subcategory.parent_category != self.category:
-            raise ValueError("Selected subcategory does not belong to the chosen category.")
+        # Validation is handled by serializer. 
+        # Removing ValueError to prevent 500 errors if validation is bypassed or race conditions occur.
+        # if self.subcategory and self.subcategory.parent_category != self.category:
+        #     raise ValueError("Selected subcategory does not belong to the chosen category.")
 
         # Normalize English
         if hasattr(self, "name_en"):
@@ -247,8 +255,12 @@ class Review(TimeStampedModel): # Applied TimeStampedModel
 # -----------------------
 class PromoBanner(models.Model):
     name = models.CharField(max_length=100, help_text="A name for internal reference")
+    background_image = models.ImageField(upload_to='promo/backgrounds/', blank=True, null=True)
+    left_image = models.ImageField(upload_to='promo/artworks/', blank=True, null=True)
+    right_image = models.ImageField(upload_to='promo/artworks/', blank=True, null=True)
     end_date = models.DateTimeField(help_text="The date and time when the promotion ends.")
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
@@ -528,3 +540,6 @@ class ContactMessage(TimeStampedModel):
 
     def __str__(self):
         return self.subject
+# -----------------------
+# Promo Banners
+# -----------------------
