@@ -1,11 +1,13 @@
 """
 Custom Social Account Adapter to handle MultipleObjectsReturned exceptions
 """
+import logging
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialAccount
 from django.core.exceptions import MultipleObjectsReturned
 from django.contrib.auth import get_user_model
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -28,21 +30,16 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             email = sociallogin.account.extra_data.get('email')
             if email:
                 try:
-                    # Try to get user by email
                     user = User.objects.get(email=email)
-                    # Connect the social account to this user
                     sociallogin.connect(request, user)
                 except User.DoesNotExist:
                     pass
                 except MultipleObjectsReturned:
-                    # If multiple users with same email, get the first one
                     user = User.objects.filter(email=email).first()
                     if user:
                         sociallogin.connect(request, user)
         except Exception as e:
-            # Log the error but don't break the flow
-            print(f"Error in pre_social_login: {e}")
-            pass
+            logger.error(f"Error in pre_social_login: {e}", exc_info=True)
     
     def get_connect_redirect_url(self, request, socialaccount):
         """

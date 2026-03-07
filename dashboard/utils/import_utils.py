@@ -1,5 +1,5 @@
 import pandas as pd
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import ForeignKey
 
 def process_import(model, file):
@@ -23,8 +23,6 @@ def process_import(model, file):
                         instance_data = {}
                         # Case-insensitive column matching
                         df_columns_map = {col.lower(): col for col in df.columns}
-                        
-                        instance_data = {}
                         for field_name, field in model_fields.items():
                             if field.primary_key: continue # Skip ID if auto-generated, unless explicitly provided
                             
@@ -41,7 +39,6 @@ def process_import(model, file):
                             if pd.isna(value): continue
 
                             if isinstance(field, ForeignKey):
-                                # ... (Existing FK logic) ...
                                 related_model = field.related_model
                                 related_obj = None
                                 try:

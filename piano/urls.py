@@ -15,6 +15,13 @@ urlpatterns = [
     # Friendly index for the auth root (shows links to login/registration)
     path('auth/', TemplateView.as_view(template_name='auth_index.html'), name='auth-home'),
     path('api/dashboard/', include('dashboard.urls')),
+    path('api/', include('products.api.urls')),
+    path('api/', include('orders.api.urls')),
+    path('api/marketing/', include('marketing.api.urls')),
+    path('api/', include('crm.api.urls')),
+    path('api/tracking/', include('tracking.urls')),
+    path('api/analytics/', include('analytics.api.urls')),
+    path('api/inventory/', include('inventory.api.urls')),
     path('api/', include('users.urls')),
     path('auth/', include('dj_rest_auth.urls')),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),

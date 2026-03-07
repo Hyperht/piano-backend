@@ -1,6 +1,7 @@
 from rest_framework import viewsets, mixins
 from rest_framework.permissions import IsAdminUser
-from users.models import Review, ContactMessage
+from users.models import ContactMessage
+from products.models import Review
 from users.serializers import ReviewSerializer, ContactMessageSerializer
 
 class ReviewViewSet(viewsets.ModelViewSet):

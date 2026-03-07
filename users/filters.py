@@ -2,7 +2,7 @@
 
 import django_filters
 from django.db.models import Q
-from .models import Product, Room, Style, Color
+from products.models import Product, Room, Style, Color
 from functools import reduce
 import operator
 

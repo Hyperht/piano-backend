@@ -6,16 +6,14 @@ from django.utils import timezone
 from decimal import Decimal
 
 from .models import (
-    Category, Subcategory, HeroSlide, PromoBanner,
-    Color, Product, CustomUser, Room, Style, PromoGridCategory,
-    Cart,
-    CartItem,
+    HeroSlide, PromoBanner,
+    CustomUser, PromoGridCategory,
     Favorite,
-    ProductImage,
-    Review,
-    # NEW IMPORTS
-    Governorate, Area, Address, Coupon, Order, OrderItem, ContactMessage,
+    Governorate, Area, Address, ContactMessage,
 )
+from products.models import Product, Category, Subcategory, Color, Room, Style, ProductImage, Review
+from orders.models import Cart, CartItem, Order, OrderItem
+from marketing.models import Coupon
 
 User = get_user_model()
 
@@ -24,7 +22,7 @@ User = get_user_model()
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ('id', 'name', 'email', 'phone_number')
+        fields = ('id', 'name', 'email', 'phone_number', 'is_staff')
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -51,12 +49,39 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+from django.contrib.auth import authenticate
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    email = serializers.EmailField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'username' in self.fields:
+            del self.fields['username']
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+        request = self.context.get('request')
+        
+        self.user = authenticate(request=request, username=email, password=password)
+        
+        if not self.user:
+            raise serializers.ValidationError({"detail": "No active account found with the given credentials"})
+            
+        refresh = self.get_token(self.user)
+        
+        data = {}
+        data['refresh'] = str(refresh)
+        data['access'] = str(refresh.access_token)
+        return data
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
         token['name'] = user.name
         token['email'] = user.email
+        token['is_staff'] = getattr(user, 'is_staff', False)
         return token
 
 
@@ -175,7 +200,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class ProductSearchSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    sale_badge_image = serializers.SerializerMethodField()
+
     category = serializers.StringRelatedField()
     subcategory = serializers.StringRelatedField()
     colors = ColorSerializer(many=True, read_only=True)
@@ -190,7 +215,7 @@ class ProductSearchSerializer(serializers.ModelSerializer):
             'original_price',
             'sale_price',
             'is_on_sale',
-            'sale_badge_image',
+
             'rating',
             'image',
             'colors',
@@ -200,15 +225,16 @@ class ProductSearchSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
-            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        # Try to get primary image, fallback to first image
+        image_obj = obj.gallery_images.filter(is_primary=True).first()
+        if not image_obj:
+            image_obj = obj.gallery_images.first()
+            
+        if image_obj and image_obj.image and hasattr(image_obj.image, 'url'):
+            return request.build_absolute_uri(image_obj.image.url) if request else image_obj.image.url
         return None
 
-    def get_sale_badge_image(self, obj):
-        request = self.context.get('request')
-        if obj.sale_badge_image and hasattr(obj.sale_badge_image, 'url'):
-            return request.build_absolute_uri(obj.sale_badge_image.url) if request else obj.sale_badge_image.url
-        return None
+
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -239,7 +265,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     # ---------- COMPUTED FIELDS ----------
     image = serializers.SerializerMethodField()
-    sale_badge_image = serializers.SerializerMethodField()
+
     is_favorited = serializers.SerializerMethodField()
 
     class Meta:
@@ -257,7 +283,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'rating',
 
             'image',
-            'sale_badge_image',
+
 
             'gallery_images',
             'colors',
@@ -279,15 +305,16 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     # ---------- IMAGE HELPERS ----------
     def get_image(self, obj):
         request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
-            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        # Try to get primary image, fallback to first image
+        image_obj = obj.gallery_images.filter(is_primary=True).first()
+        if not image_obj:
+            image_obj = obj.gallery_images.first()
+
+        if image_obj and image_obj.image and hasattr(image_obj.image, 'url'):
+            return request.build_absolute_uri(image_obj.image.url) if request else image_obj.image.url
         return None
 
-    def get_sale_badge_image(self, obj):
-        request = self.context.get('request')
-        if obj.sale_badge_image and hasattr(obj.sale_badge_image, 'url'):
-            return request.build_absolute_uri(obj.sale_badge_image.url) if request else obj.sale_badge_image.url
-        return None
+
 
     # ---------- FAVORITE CHECK ----------
     def get_is_favorited(self, obj):
@@ -391,8 +418,9 @@ class UserAddressSerializer(serializers.ModelSerializer):
         fields = [
             'id', 
             'first_name', 
-            'last_name', 
-            'phone_number', 
+            'last_name',  
+            'phone_number_1',
+            'phone_number_2',
             'street_address', 
             'apartment_details', 
             'area', 
@@ -429,7 +457,8 @@ class ShippingAddressSerializer(serializers.ModelSerializer):
             # 🎯 CRITICAL FIX: Add all fields necessary to create a new Address instance
             'first_name', 
             'last_name', 
-            'phone_number', 
+            'phone_number_1', 
+            'phone_number_2',
             'street_address', 
             'apartment_details', 
             # End of critical fields
@@ -444,8 +473,8 @@ class ShippingAddressSerializer(serializers.ModelSerializer):
 class CouponSerializer(serializers.ModelSerializer):
     class Meta:
         model = Coupon
-        fields = ['code', 'discount_percent', 'valid_from', 'valid_to', 'is_active']
-        read_only_fields = ['discount_percent', 'valid_from', 'valid_to', 'is_active']
+        fields = ['code', 'discount_type', 'discount_value', 'valid_from', 'expires_at', 'is_active']
+        read_only_fields = ['discount_type', 'discount_value', 'valid_from', 'expires_at', 'is_active']
 
 # --- SHOPPING CART SERIALIZERS ---
 class CartItemSerializer(serializers.ModelSerializer):
@@ -465,27 +494,14 @@ class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     cart_subtotal = serializers.SerializerMethodField() 
     
-    coupon_code = serializers.CharField(source='coupon.code', read_only=True, allow_null=True)
-    coupon_discount_percent = serializers.IntegerField(source='coupon.discount_percent', read_only=True, allow_null=True)
-    
-    coupon_discount_amount = serializers.SerializerMethodField() 
-    
     class Meta:
         model = Cart
-        fields = ['id', 'user', 'items', 'cart_subtotal', 'coupon_code', 'coupon_discount_percent', 'coupon_discount_amount', 'created_at']
+        fields = ['id', 'user', 'items', 'cart_subtotal', 'created_at']
 
     def get_cart_subtotal(self, obj):
         return obj.get_cart_total()
 
-    def get_coupon_discount_amount(self, obj):
-        """Calculates the money discount based on subtotal and coupon percent."""
-        if not obj.coupon:
-            return Decimal('0.00')
-        
-        subtotal = obj.get_cart_total()
-        discount_percent = Decimal(obj.coupon.discount_percent) / Decimal(100)
-        discount_amount = subtotal * discount_percent
-        return discount_amount.quantize(Decimal('0.01'))
+
 
 
 # --- ORDER SERIALIZERS ---
@@ -497,12 +513,19 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     def get_product_image(self, obj):
         try:
-            if obj.product and getattr(obj.product, 'image', None):
-                request = self.context.get('request')
-                url = obj.product.image.url
-                if request is not None:
-                    return request.build_absolute_uri(url)
-                return url
+            if obj.product:
+                # Try to get primary image, fallback to first image
+                image_obj = obj.product.gallery_images.filter(is_primary=True).first()
+                if not image_obj:
+                    image_obj = obj.product.gallery_images.first()
+                
+                if image_obj and image_obj.image:
+                     request = self.context.get('request')
+                     url = image_obj.image.url
+                     if request is not None:
+                         return request.build_absolute_uri(url)
+                     return url
+            return None
         except Exception:
             return None
 
@@ -567,7 +590,13 @@ class CheckoutSerializer(serializers.Serializer):
         max_length=50, 
         help_text="e.g., 'Cash on Delivery', 'Credit Card', 'PayPal'."
     )
-    # 💡 Coupon code removed as it should be applied to the Cart *before* checkout.
+    # Support for optional coupon code
+    coupon_code = serializers.CharField(
+        max_length=50, 
+        required=False, 
+        allow_blank=True,
+        help_text="Optional coupon code to apply."
+    )
     
     @transaction.atomic
     def create(self, validated_data):
@@ -576,6 +605,7 @@ class CheckoutSerializer(serializers.Serializer):
         # 1. Pop nested data
         address_data = validated_data.pop('shipping_address')
         payment_method = validated_data.pop('payment_method')
+        coupon_code = validated_data.pop('coupon_code', None)
         
         # --- Pre-Order Checks and Calculations ---
         try:
@@ -602,11 +632,21 @@ class CheckoutSerializer(serializers.Serializer):
         coupon = None
         coupon_discount_amount = Decimal('0.00')
         
-        # Source of truth for coupon is the cart object
-        if cart.coupon and cart.coupon.is_active and cart.coupon.valid_to >= timezone.now():
-            coupon = cart.coupon
-            discount_percent = Decimal(coupon.discount_percent) / Decimal(100)
-            coupon_discount_amount = cart_subtotal * discount_percent
+        if coupon_code:
+            from marketing.services.coupon_service import CouponService
+            try:
+                result = CouponService.validate_and_calculate_discount(
+                    coupon_code=coupon_code,
+                    cart_subtotal=cart_subtotal,
+                    user=user
+                )
+                coupon = result['coupon']
+                coupon_discount_amount = result['discount_amount']
+            except ValidationError as e:
+                # If the coupon is invalid at the final checkout step, we might want to error out
+                # or just proceed without discount? Usually better to error to avoid surprise.
+                raise serializers.ValidationError({"coupon_code": str(e.message) if hasattr(e, 'message') else str(e)})
+
         
         final_total = (cart_subtotal + shipping_cost) - coupon_discount_amount
         
@@ -635,20 +675,51 @@ class CheckoutSerializer(serializers.Serializer):
         
         # 6. Create Order Items (The snapshot)
         order_items = []
-        for cart_item in cart.items.select_related('product').all():
+        for cart_item in cart.items.select_related('product', 'product__vendor').all():
+            product = cart_item.product
+            price_snapshot = product.get_current_price()
+            subtotal = price_snapshot * cart_item.quantity
+            
+            # Calculate commission (assuming 10% default if not set on vendor)
+            vendor = product.vendor
+            commission_rate = vendor.commission_rate if vendor else Decimal('0.00')
+            commission_amount = (subtotal * commission_rate / Decimal(100)).quantize(Decimal('0.01'))
+            
+            if not vendor:
+                # Assign to a default/system vendor or handle error?
+                # For now, we'll try to get the first vendor as generic placeholder or create one if needed?
+                # Actually, OrderItem requires vendor.
+                from vendors.models import Vendor
+                vendor = Vendor.objects.first()
+                if not vendor:
+                     # Emergency fallback - creates a system vendor
+                     vendor = Vendor.objects.create(name='System Vendor', commission_rate=0.00)
+
             order_items.append(
                 OrderItem(
                     order=order,
-                    product=cart_item.product,
-                    product_name=cart_item.product.name,
+                    product=product,
+                    vendor=vendor,
                     quantity=cart_item.quantity,
-                    price_at_purchase=cart_item.product.get_current_price()
+                    price_snapshot=price_snapshot,
+                    subtotal=subtotal,
+                    commission_amount=commission_amount
                 )
             )
         OrderItem.objects.bulk_create(order_items)
             
         # 7. Clear/Deactivate the User's Cart
         cart.delete() # Clears the cart and all its items
+
+        # 8. Record Coupon Usage (Post-Creation)
+        if coupon:
+            from marketing.services.coupon_service import CouponService
+            CouponService.record_usage(
+                coupon=coupon,
+                user=user,
+                order=order,
+                discount_applied=coupon_discount_amount
+            )
 
         return order # CRITICAL: Ensure the created order object is returned
 
@@ -670,14 +741,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
     Serializers to display a user's profile, including their favorited products and orders.
     """
     favorites = FavoriteSerializer(many=True, read_only=True)
-    # Corrected: Use source='order_set' to match the database reverse relationship name
-    orders = OrderListSerializer(source='order_set', many=True, read_only=True) 
+    # The related_name on Order.user is 'orders'
+    orders = OrderListSerializer(many=True, read_only=True) 
     
     class Meta:
         model = CustomUser
         # 🌟 FIX: Removed 'username' as it likely doesn't exist on CustomUser
         # if email is used as the USERNAME_FIELD.
-        fields = ['id', 'email', 'name', 'phone_number', 'favorites', 'orders']
+        fields = ['id', 'email', 'name', 'phone_number', 'is_staff', 'favorites', 'orders']
 
 
 # -----------------------

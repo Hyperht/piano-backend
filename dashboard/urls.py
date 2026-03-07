@@ -1,11 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from dashboard.analytics.views import (
+from analytics.api.views import (
     DashboardAnalyticsView, RevenueChartView, OrdersChartView, AdminProfileView, TopProductsView
 )
 from dashboard.viewsets.catalog import (
     ProductViewSet, CategoryViewSet, SubcategoryViewSet, 
-    ColorViewSet, RoomViewSet, StyleViewSet, PromoBannerViewSet
+    ColorViewSet, RoomViewSet, StyleViewSet, PromoBannerViewSet,
+    ProductImageViewSet
 )
 from dashboard.viewsets.orders import OrderViewSet
 from dashboard.viewsets.users import UserViewSet
@@ -22,6 +23,7 @@ router.register(r'colors', ColorViewSet)
 router.register(r'rooms', RoomViewSet)
 router.register(r'styles', StyleViewSet)
 router.register(r'promo-banners', PromoBannerViewSet)
+router.register(r'products/images', ProductImageViewSet, basename="product-images")
 
 # Marketing
 from dashboard.viewsets.marketing import CouponViewSet, HeroSlideViewSet, PromoGridCategoryViewSet
@@ -41,10 +43,18 @@ router.register(r'areas', AreaViewSet)
 router.register(r'addresses', AddressViewSet)
 
 # Sales
+# Sales
 from dashboard.viewsets.sales import CartViewSet, CartItemViewSet, FavoriteViewSet
 router.register(r'cart', CartViewSet)
 router.register(r'cart-items', CartItemViewSet)
 router.register(r'favorites', FavoriteViewSet)
+
+# Inventory & Tracking & Vendors
+from dashboard.viewsets.inventory import StockMovementViewSet
+from dashboard.viewsets.vendors import VendorViewSet
+
+router.register(r'inventory', StockMovementViewSet)
+router.register(r'vendors', VendorViewSet)
 
 urlpatterns = [
     path('analytics/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),

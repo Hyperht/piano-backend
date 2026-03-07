@@ -1,22 +1,14 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
-from users.models import Coupon, HeroSlide, PromoGridCategory
-from users.serializers import (
-    HeroSlideSerializer, 
-    PromoGridCategorySerializer,
-    # Assuming CouponSerializer exists or needs to be created. 
-    # If it doesn't exist in users.serializers, we might need to define it here or imported generically.
-    # Looking at users/views.py, ApplyCouponView uses CartSerializer, so we might need a specific CouponSerializer.
-)
-from rest_framework import serializers
+from marketing.models import Coupon
+from users.models import HeroSlide, PromoGridCategory
+from users.serializers import HeroSlideSerializer, PromoGridCategorySerializer
+from dashboard.serializers import CouponSerializer
 
-class CouponSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Coupon
-        fields = '__all__'
 
+# Admin CRUD viewsets for marketing entities: coupons, hero slides, and promo grid categories
 class CouponViewSet(viewsets.ModelViewSet):
-    queryset = Coupon.objects.all().order_by('-valid_to')
+    queryset = Coupon.objects.all().order_by('-expires_at')
     serializer_class = CouponSerializer
     permission_classes = [IsAdminUser]
 

@@ -3,7 +3,7 @@ from django.db import transaction
 from pathlib import Path
 import json
 
-from users.models import Color, Product
+from products.models import Color, Product
 
 # Canonical palette we want available in the backend. These are chosen
 # to cover the colors shown in the screenshot and common UI palette.

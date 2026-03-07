@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
-from users.models import Cart, CartItem, Favorite
+from users.models import Favorite
+from orders.models import Cart, CartItem
 from users.serializers import CartSerializer, CartItemSerializer, FavoriteSerializer
 
 class CartViewSet(viewsets.ReadOnlyModelViewSet):
