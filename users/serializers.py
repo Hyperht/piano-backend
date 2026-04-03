@@ -152,17 +152,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class HeroSlideSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-
     class Meta:
         model = HeroSlide
-        fields = ['id', 'title', 'subtitle', 'image', 'button_text', 'button_link']
-
-    def get_image(self, obj):
-        request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
-            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
-        return None
+        fields = '__all__'
 
 
 class PromoBannerSerializer(serializers.ModelSerializer):
@@ -180,13 +172,9 @@ class ColorSerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     color_hex = serializers.CharField(source='color.hex_code', read_only=True, allow_null=True)
 
-    # Language specific fields (created by modeltranslation)
-    alt_text_en = serializers.CharField(required=False, allow_blank=True)
-    alt_text_ar = serializers.CharField(required=False, allow_blank=True)
-
     class Meta:
         model = ProductImage
-        fields = ['image', 'alt_text', 'alt_text_en', 'alt_text_ar', 'color_hex']
+        fields = '__all__'
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -354,17 +342,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 # New Serializer for Promo Grid
 # -----------------------
 class PromoGridCategorySerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-
     class Meta:
         model = PromoGridCategory
-        fields = ['id', 'title', 'title_en', 'title_ar', 'subtitle', 'subtitle_en', 'subtitle_ar', 'image', 'background_color']
-
-    def get_image(self, obj):
-        request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
-            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
-        return None
+        fields = '__all__'
 
 # --- LOCATION SERIALIZERS (Nested Read-Only) ---
 class AreaNestedSerializer(serializers.ModelSerializer):
