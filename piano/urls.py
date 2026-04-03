@@ -5,8 +5,16 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from rest_framework.routers import DefaultRouter
+from marketing.api.views import HeroSlideViewSet, PromoGridCategoryViewSet
+
 # هذا السطر ليس ضروريًا إذا استخدمنا دالة static()، ولكن لا ضرر من بقائه
 from django.views.static import serve as static_serve
+
+# Backward compatibility router for legacy endpoints that clients (or older frontend builds) might still call
+legacy_router = DefaultRouter()
+legacy_router.register(r'hero-slides', HeroSlideViewSet, basename='legacy-hero-slides')
+legacy_router.register(r'promo-grid-categories', PromoGridCategoryViewSet, basename='legacy-promo-grid-categories')
 
 # 1. المسارات الأساسية للـ API ولوحة التحكم
 urlpatterns = [
@@ -23,6 +31,7 @@ urlpatterns = [
     path('api/analytics/', include('analytics.api.urls')),
     path('api/inventory/', include('inventory.api.urls')),
     path('api/', include('users.urls')),
+    path('api/', include(legacy_router.urls)),
     path('auth/', include('dj_rest_auth.urls')),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
     path('accounts/', include('allauth.urls')),
@@ -37,8 +46,13 @@ if settings.DEBUG:
     ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+from django.shortcuts import redirect
+
 # 3. مسار اصطياد الكل لخدمة الواجهة الأمامية يأتي في النهاية
 urlpatterns += [
+    # Auto-redirect for images missing the media prefix (handles Screenshot...png 404s)
+    re_path(r'^(?P<path>.*\.(?:png|jpg|jpeg|gif|webp|svg))$', lambda request, path: redirect(f'/media/{path}')),
+
     # Updated regex to allow 'admin' to pass through to frontend
     # Only 'django-admin' is now reserved for backend admin
     re_path(r'^(?!django-admin|api|auth|accounts|media).*$', TemplateView.as_view(template_name='index.html'), name='home'),
